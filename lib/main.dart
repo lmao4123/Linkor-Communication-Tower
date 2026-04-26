@@ -35,7 +35,7 @@ class _HomePageState extends State<HomePage> {
   DeviceMode currentMode = DeviceMode.idle;
   String status = "Not connected";
 
-  final String pcUrl = "http://192.168.1.76:5000";
+ final String pcUrl = "https://linkor-communication-tower.onrender.com";
 
   String modeText(DeviceMode mode) {
     switch (mode) {
