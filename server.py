@@ -1,48 +1,75 @@
 from flask import Flask, request, jsonify, send_from_directory
 import os
+import socket
+import threading
+import time
 
 app = Flask(__name__)
 
-# 📁 Folder where files are saved
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# 🔗 Check server status
+# -------------------------
+# BASIC SERVER API
+# -------------------------
+
 @app.route("/")
 def home():
-    return "Linkor server is running 🚀"
+    return "Synco PC Server Running 🚀"
 
-@app.route("/status", methods=["GET"])
+@app.route("/status")
 def status():
-    return jsonify({"status": "connected"})
+    return jsonify({"message": "PC connected", "status": "ok"})
 
-# 📤 Upload file
 @app.route("/upload", methods=["POST"])
-def upload_file():
+def upload():
     if "file" not in request.files:
-        return jsonify({"error": "No file sent"}), 400
+        return jsonify({"error": "no file"}), 400
 
     file = request.files["file"]
-    file.save(os.path.join(UPLOAD_FOLDER, file.filename))
+    save_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(save_path)
 
     print("📁 Received:", file.filename)
 
-    return jsonify({
-        "status": "file received",
-        "filename": file.filename
-    })
+    return jsonify({"status": "file received", "file": file.filename})
 
-# 📄 List all uploaded files
-@app.route("/files", methods=["GET"])
-def list_files():
-    files = os.listdir(UPLOAD_FOLDER)
-    return jsonify(files)
+@app.route("/files")
+def files():
+    return jsonify(os.listdir(UPLOAD_FOLDER))
 
-# 📥 Download a specific file
 @app.route("/download/<filename>")
-def download_file(filename):
+def download(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
-# 🚀 Run server
+# -------------------------
+# WIFI AUTO DISCOVERY
+# -------------------------
+
+def broadcast_pc():
+    """
+    Sends PC presence to local network so Flutter can auto-detect it
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+    while True:
+        try:
+            message = b"SYNCO_PC_DISCOVERY"
+            s.sendto(message, ("<broadcast>", 9999))
+            time.sleep(2)  # broadcast every 2 seconds
+        except:
+            pass
+
+# -------------------------
+# START SERVER
+# -------------------------
+
 if __name__ == "__main__":
+    print("🚀 Starting Synco PC Server...")
+
+    # start WiFi discovery in background
+    threading.Thread(target=broadcast_pc, daemon=True).start()
+
+    # run flask server
     app.run(host="0.0.0.0", port=5000)
