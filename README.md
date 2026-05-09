@@ -1,17 +1,30 @@
-# pc_phone_communication_bridge
+📱 Linkor/Synco – Phone ↔ PC Communication System
 
-A new Flutter project.
+Linkor/Synco is a lightweight mobile-to-PC communication tool that allows fast and simple file transfer between your phone and computer. It supports both USB (manual IP) and WiFi (auto-detect) connection modes, giving users flexibility depending on their setup.
 
-## Getting Started
+With Linkor/Synco, you can:
 
-This project is a starting point for a Flutter application.
+📁 Send multiple files from phone to PC
+🌐 Connect via WiFi without typing IP addresses
+🔌 Use USB/manual IP mode for stable local transfers
+💻 Receive and store files directly on your computer
 
-A few resources to get you started if this is your first Flutter project:
+📦 Download
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+The APK is available in the Releases tab of this repository.
+Go to the latest release and download the app from there.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Also The Server is available in the Releases tab of this repository.
+Go to the latest release and download the app from there.
+
+⚠️ Important Requirement
+
+To use Linkor/Synco properly, you must run the PC server.
+
+You need:
+
+🐍 Python installed on your computer
+Flask installed (pip install flask)
+The server script running while using the app
+
+Without the PC server running, the app will not be able to send or receive files.
