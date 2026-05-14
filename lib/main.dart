@@ -5,12 +5,14 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 
 void main() {
-  runApp(SyncoApp());
+  runApp(const SyncoApp());
 }
 
 enum ConnectionType { usb, wifi }
 
 class SyncoApp extends StatelessWidget {
+  const SyncoApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -19,12 +21,14 @@ class SyncoApp extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0E0E0E),
       ),
-      home: HomePage(),
+      home: const HomePage(),
     );
   }
 }
 
 class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -34,38 +38,36 @@ class _HomePageState extends State<HomePage> {
 
   String status = "Not connected";
 
-  String pcUrl = "http://192.168.1.76:5000"; // 🔥 CHANGE THIS
+  String pcUrl = "http://192.168.1.76:5000"; // change this if needed
 
   String? discoveredIp;
 
-  @override
-  void initState() {
-    super.initState();
-    if (mode == ConnectionType.wifi) {
-      startDiscovery();
-    }
-  }
-
   // -------------------------
-  // WIFI AUTO DISCOVERY
+  // WIFI DISCOVERY
   // -------------------------
   void startDiscovery() async {
-    RawDatagramSocket.bind(InternetAddress.anyIPv4, 9999)
-        .then((socket) {
-      socket.listen((event) {
-        if (event == RawSocketEvent.read) {
-          Datagram? dg = socket.receive();
+    try {
+      RawDatagramSocket.bind(InternetAddress.anyIPv4, 9999)
+          .then((socket) {
+        socket.listen((event) {
+          if (event == RawSocketEvent.read) {
+            Datagram? dg = socket.receive();
 
-          if (dg != null) {
-            setState(() {
-              discoveredIp = dg.address.address;
-              pcUrl = "http://$discoveredIp:5000";
-              status = "PC found: $discoveredIp";
-            });
+            if (dg != null) {
+              setState(() {
+                discoveredIp = dg.address.address;
+                pcUrl = "http://$discoveredIp:5000";
+                status = "PC found: $discoveredIp";
+              });
+            }
           }
-        }
+        });
       });
-    });
+    } catch (e) {
+      setState(() {
+        status = "WiFi discovery error";
+      });
+    }
   }
 
   // -------------------------
@@ -74,11 +76,17 @@ class _HomePageState extends State<HomePage> {
   Future<void> checkConnection() async {
     try {
       final res = await http.get(Uri.parse("$pcUrl/status"));
-      final data = jsonDecode(res.body);
 
-      setState(() {
-        status = data["message"];
-      });
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        setState(() {
+          status = data["message"];
+        });
+      } else {
+        setState(() {
+          status = "❌ Server error";
+        });
+      }
     } catch (e) {
       setState(() {
         status = "❌ PC not reachable";
@@ -87,30 +95,53 @@ class _HomePageState extends State<HomePage> {
   }
 
   // -------------------------
-  // SEND MULTIPLE FILES
+  // SEND FILES (FIXED)
   // -------------------------
   Future<void> sendFiles() async {
-    FilePickerResult? result =
-        await FilePicker.platform.pickFiles(allowMultiple: true);
+    try {
+      FilePickerResult? result =
+          await FilePicker.platform.pickFiles(allowMultiple: true);
 
-    if (result == null) return;
+      if (result == null) {
+        setState(() => status = "No files selected");
+        return;
+      }
 
-    for (var file in result.files) {
-      var request =
-          http.MultipartRequest("POST", Uri.parse("$pcUrl/upload"));
+      int sent = 0;
 
-      request.files.add(await http.MultipartFile.fromPath(
-        "file",
-        file.path!,
-        filename: file.name,
-      ));
+      for (var file in result.files) {
+        if (file.path == null) continue;
 
-      await request.send();
+        var request = http.MultipartRequest(
+          "POST",
+          Uri.parse("$pcUrl/upload"),
+        );
+
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            "file",
+            file.path!,
+            filename: file.name,
+          ),
+        );
+
+        var response = await request.send();
+
+        print("UPLOAD ${file.name}: ${response.statusCode}");
+
+        if (response.statusCode == 200) {
+          sent++;
+        }
+      }
+
+      setState(() {
+        status = "Sent $sent/${result.files.length} files";
+      });
+    } catch (e) {
+      setState(() {
+        status = "Upload error: $e";
+      });
     }
-
-    setState(() {
-      status = "Sent ${result.files.length} files";
-    });
   }
 
   // -------------------------
@@ -133,7 +164,7 @@ class _HomePageState extends State<HomePage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ChoiceChip(
-                  label: Text("USB"),
+                  label: const Text("USB"),
                   selected: mode == ConnectionType.usb,
                   onSelected: (_) {
                     setState(() {
@@ -145,7 +176,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(width: 10),
                 ChoiceChip(
-                  label: Text("WiFi"),
+                  label: const Text("WiFi"),
                   selected: mode == ConnectionType.wifi,
                   onSelected: (_) {
                     setState(() {
@@ -168,7 +199,7 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 20),
 
-            // CHECK BUTTON
+            // CHECK CONNECTION
             ElevatedButton(
               onPressed: checkConnection,
               child: const Text("Check PC"),
@@ -176,7 +207,7 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 20),
 
-            // SEND FILES BUTTON
+            // SEND FILES
             ElevatedButton(
               onPressed: sendFiles,
               child: const Text("Send Files"),
